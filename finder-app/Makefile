@@ -11,6 +11,11 @@ endif
 .PHONY: build
 build:
 	$(CC) -Wall -Werror $(SOURCE) -o writer
+
+.PHONY: all
+all:
+	make clean
+	make build
 	
 
 
