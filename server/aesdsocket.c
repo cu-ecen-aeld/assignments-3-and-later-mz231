@@ -58,23 +58,31 @@ int main(int argc, char *argv[]) {
 
     listen(socket_fd, 2);
 
-    char recv_buffer[65536] = {0};
 
 
     aesdsocketdata_fd = open("/var/tmp/aesdsocketdata", O_RDWR|O_TRUNC|O_CREAT, 0644);
 
+    printf("---aesdsocket running---\n");
+
     while(1) {
-        struct sockaddr_in client_addr;
+        char recv_buffer[1024] = {0};
         connection_fd = accept(socket_fd, (struct sockaddr*)NULL, NULL);
-        recv(connection_fd, &recv_buffer, sizeof(recv_buffer), 0);
-        write(aesdsocketdata_fd, &recv_buffer, strlen(recv_buffer));
-    
+        int bytes_received = recv(connection_fd, &recv_buffer, sizeof(recv_buffer), 0);
+        while(bytes_received == sizeof(recv_buffer)) {
+            write(aesdsocketdata_fd, &recv_buffer, bytes_received);
+            fsync(aesdsocketdata_fd);
+            bytes_received = recv(connection_fd, &recv_buffer, sizeof(recv_buffer), 0);
+        }
+        write(aesdsocketdata_fd, &recv_buffer, bytes_received);
         fsync(aesdsocketdata_fd);
         lseek(aesdsocketdata_fd, 0, SEEK_SET);
-        char read_buffer[65536] = {0};
-        read(aesdsocketdata_fd, &read_buffer,sizeof(read_buffer));    
-        send(connection_fd, &read_buffer, strlen(read_buffer), 0);
-        
+        char read_buffer[1024] = {0};
+        int bytes_read = read(aesdsocketdata_fd, &read_buffer,sizeof(read_buffer));    
+        while(bytes_read == sizeof(read_buffer)) {
+            send(connection_fd, &read_buffer, bytes_read, 0);
+            bytes_read = read(aesdsocketdata_fd, &read_buffer,sizeof(read_buffer));  
+        }
+        send(connection_fd, &read_buffer, bytes_read, 0); 
     }
 
 }
